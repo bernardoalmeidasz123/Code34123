@@ -4,7 +4,7 @@ import "./styles.css";
 
 const languages = ["PYTHON", "JAVASCRIPT", "CSHARP", "JAVA", "PHP", "DART"];
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://code34123-bumv.vercel.app/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api",
 });
 
 function setAuthToken(token) {
@@ -30,7 +30,8 @@ export default function App() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [amountReais, setAmountReais] = useState("99.00");
-  const [qr, setQr] = useState("");
+  const [txid, setTxid] = useState("");
+  const [pixKey, setPixKey] = useState("");
   const [purchases, setPurchases] = useState([]);
 
   useEffect(() => {
@@ -98,7 +99,8 @@ export default function App() {
     try {
       const amountCents = Math.round(parseFloat(amountReais.replace(",", ".")) * 100) || 0;
       const res = await api.post("/purchases/create", { language: lang, amountCents });
-      setQr(res.data.purchase.pixQrCode);
+      setTxid(res.data.purchase.pixQrCode); // aqui guardamos o txid
+      setPixKey(res.data.purchase.pixKey);
       setMessage("PIX gerado.");
       loadPurchases();
     } catch (e) {
@@ -109,18 +111,10 @@ export default function App() {
   return (
     <div className="page">
       <nav className="tabs">
-        <button className={`tab ${tab === "login" ? "active" : ""}`} onClick={() => setTab("login")}>
-          Login
-        </button>
-        <button className={`tab ${tab === "checkout" ? "active" : ""}`} onClick={() => setTab("checkout")}>
-          Checkout
-        </button>
-        <button className={`tab ${tab === "exercicios" ? "active" : ""}`} onClick={() => setTab("exercicios")}>
-          Exercícios
-        </button>
-        <button className={`tab ${tab === "gratis" ? "active" : ""}`} onClick={() => setTab("gratis")}>
-          Gratuitos
-        </button>
+        <button className={`tab ${tab === "login" ? "active" : ""}`} onClick={() => setTab("login")}>Login</button>
+        <button className={`tab ${tab === "checkout" ? "active" : ""}`} onClick={() => setTab("checkout")}>Checkout</button>
+        <button className={`tab ${tab === "exercicios" ? "active" : ""}`} onClick={() => setTab("exercicios")}>Exercícios</button>
+        <button className={`tab ${tab === "gratis" ? "active" : ""}`} onClick={() => setTab("gratis")}>Gratuitos</button>
       </nav>
 
       {error && <p className="error">{error}</p>}
@@ -148,7 +142,7 @@ export default function App() {
         <section className="panel">
           <div className="panel-head">
             <h2>Checkout PIX</h2>
-            <span>Valor em reais</span>
+            <span>Valor em reais (sem QR, só chave)</span>
           </div>
           <div className="checkout-grid">
             <div className="card">
@@ -162,14 +156,17 @@ export default function App() {
               </div>
               <label>Valor (R$)</label>
               <input type="text" value={amountReais} onChange={(e) => setAmountReais(e.target.value)} />
-              <button className="neo-btn" onClick={createPix} disabled={!token}>
-                Gerar PIX
-              </button>
-              {qr && (
+              <button className="neo-btn" onClick={createPix} disabled={!token}>Gerar PIX</button>
+              {pixKey && (
                 <div className="qr-box">
-                  <h5>QR Code PIX</h5>
-                  <p className="muted">Copie a linha abaixo para pagar:</p>
-                  <textarea readOnly value={qr} />
+                  <h5>Chave PIX</h5>
+                  <textarea readOnly value={pixKey} />
+                  {txid && (
+                    <>
+                      <h5>TXID</h5>
+                      <textarea readOnly value={txid} />
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -207,9 +204,7 @@ export default function App() {
                 <h4>{ex.title}</h4>
                 <p>{ex.content}</p>
                 <textarea value={code} onChange={(e) => setCode(e.target.value)} placeholder={ex.starterCode || "// seu código"} />
-                <button className="neo-btn" onClick={() => submitExercise(ex.id)}>
-                  Enviar
-                </button>
+                <button className="neo-btn" onClick={() => submitExercise(ex.id)}>Enviar</button>
               </article>
             ))}
           </div>
