@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LanguageCode {
+  PYTHON
+  JAVASCRIPT
+  CSHARP
+  JAVA
+  PHP
+  DART
+}
+
+model User {
+  id             String       @id @default(uuid())
+  email          String       @unique
+  passwordHash   String
+  name           String?
+  role           UserRole     @default(USER)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  unlocked       LanguagePurchase[]
+  exerciseRuns   ExerciseRun[]
+}
+
+model LanguagePurchase {
+  id          String       @id @default(uuid())
+  user        User         @relation(fields: [userId], references: [id])
+  userId      String
+  language    LanguageCode
+  status      PurchaseStatus @default(PENDING)
+  pixQrCode   String
+  pixKey      String
+  amountCents Int
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Exercise {
+  id          String       @id @default(uuid())
+  title       String
+  slug        String       @unique
+  language    LanguageCode?
+  content     String
+  starterCode String?
+  tests       Json?
+  order       Int
+  isFree      Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  runs        ExerciseRun[]
+}
+
+model ExerciseRun {
+  id           String     @id @default(uuid())
+  user         User       @relation(fields: [userId], references: [id])
+  userId       String
+  exercise     Exercise   @relation(fields: [exerciseId], references: [id])
+  exerciseId   String
+  status       RunStatus  @default(PENDING)
+  code         String?
+  output       String?
+  xpAwarded    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+enum RunStatus {
+  PENDING
+  PASSED
+  FAILED
+}
+
+enum PurchaseStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
