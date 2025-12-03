@@ -4,7 +4,7 @@ import "./styles.css";
 
 const languages = ["PYTHON", "JAVASCRIPT", "CSHARP", "JAVA", "PHP", "DART"];
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api",
+  baseURL: import.meta.env.VITE_API_URL || "https://code34123-bumv.vercel.app/api",
 });
 
 function setAuthToken(token) {
