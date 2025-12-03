@@ -8,7 +8,7 @@ export const router = express.Router();
 router.post("/create", requireAuth, async (req, res) => {
   const { language, amountCents } = req.body;
   if (!language || !amountCents) return res.status(400).json({ message: "Missing fields" });
-  const pixKey = process.env.PIX_KEY || "SUA_CHAVE_PIX_AQUI";
+  const pixKey = process.env.PIX_KEY || "32984620791";
   const txid = uuid();
   const purchase = await prisma.languagePurchase.create({
     data: {
