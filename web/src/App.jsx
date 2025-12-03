@@ -4,7 +4,7 @@ import "./styles.css";
 
 const languages = ["PYTHON", "JAVASCRIPT", "CSHARP", "JAVA", "PHP", "DART"];
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://code34123-bumv.vercel.app/",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api",
 });
 
 function setAuthToken(token) {
@@ -18,6 +18,7 @@ function setAuthToken(token) {
 }
 
 export default function App() {
+  const [tab, setTab] = useState("login");
   const [free, setFree] = useState([]);
   const [lang, setLang] = useState("PYTHON");
   const [exercises, setExercises] = useState([]);
@@ -28,7 +29,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [amount, setAmount] = useState("9900");
+  const [amountReais, setAmountReais] = useState("99.00");
   const [qr, setQr] = useState("");
   const [purchases, setPurchases] = useState([]);
 
@@ -67,6 +68,7 @@ export default function App() {
       setAuthToken(res.data.token);
       setMessage("Login realizado.");
       loadPurchases();
+      setTab("checkout");
     } catch (e) {
       setError(e.response?.data?.message || "Falha no login");
     } finally {
@@ -94,10 +96,8 @@ export default function App() {
       return;
     }
     try {
-      const res = await api.post("/purchases/create", {
-        language: lang,
-        amountCents: parseInt(amount, 10) || 0,
-      });
+      const amountCents = Math.round(parseFloat(amountReais.replace(",", ".")) * 100) || 0;
+      const res = await api.post("/purchases/create", { language: lang, amountCents });
       setQr(res.data.purchase.pixQrCode);
       setMessage("PIX gerado.");
       loadPurchases();
@@ -108,52 +108,90 @@ export default function App() {
 
   return (
     <div className="page">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">Futuristic • Azul & Preto</p>
-          <h1>Code34</h1>
-          <p>34 exercícios gratuitos de lógica e 34 por linguagem com desbloqueio via PIX.</p>
-          <div className="cta-row">
-            <button className="neo-btn" onClick={handleLogin} disabled={loading}>
-              {loading ? "Entrando..." : token ? "Logado" : "Entrar"}
-            </button>
-            <button className="neo-btn ghost" onClick={createPix} disabled={!token}>
-              Desbloquear linguagem
-            </button>
+      <nav className="tabs">
+        <button className={`tab ${tab === "login" ? "active" : ""}`} onClick={() => setTab("login")}>
+          Login
+        </button>
+        <button className={`tab ${tab === "checkout" ? "active" : ""}`} onClick={() => setTab("checkout")}>
+          Checkout
+        </button>
+        <button className={`tab ${tab === "exercicios" ? "active" : ""}`} onClick={() => setTab("exercicios")}>
+          Exercícios
+        </button>
+        <button className={`tab ${tab === "gratis" ? "active" : ""}`} onClick={() => setTab("gratis")}>
+          Gratuitos
+        </button>
+      </nav>
+
+      {error && <p className="error">{error}</p>}
+      {message && <p className="ok">{message}</p>}
+
+      {tab === "login" && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Login</h2>
+            <span>Entre com suas credenciais</span>
           </div>
-          {error && <p className="error">{error}</p>}
-          {message && <p className="ok">{message}</p>}
-        </div>
-        <div className="glass">
-          <h3>Login</h3>
           <div className="form">
             <label>Email</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" />
             <label>Senha</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="******" />
             <button className="neo-btn" onClick={handleLogin} disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? "Entrando..." : token ? "Logado" : "Entrar"}
             </button>
           </div>
-          <div className="glass-info">
-            <h4>Progresso rápido</h4>
-            <ul>
-              <li>XP por exercício</li>
-              <li>Certificado ao concluir 34</li>
-              <li>PIX com QR único</li>
-            </ul>
-          </div>
-        </div>
-      </header>
+        </section>
+      )}
 
-      <section className="panel" id="checkout">
-        <div className="panel-head">
-          <h2>Checkout PIX</h2>
-          <span>Escolha a linguagem e gere o QR</span>
-        </div>
-        <div className="checkout-grid">
-          <div className="card">
-            <h4>Linguagens</h4>
+      {tab === "checkout" && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Checkout PIX</h2>
+            <span>Valor em reais</span>
+          </div>
+          <div className="checkout-grid">
+            <div className="card">
+              <h4>Linguagens</h4>
+              <div className="chips">
+                {languages.map((l) => (
+                  <button key={l} className={`chip ${l === lang ? "active" : ""}`} onClick={() => setLang(l)}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <label>Valor (R$)</label>
+              <input type="text" value={amountReais} onChange={(e) => setAmountReais(e.target.value)} />
+              <button className="neo-btn" onClick={createPix} disabled={!token}>
+                Gerar PIX
+              </button>
+              {qr && (
+                <div className="qr-box">
+                  <h5>QR Code PIX</h5>
+                  <p className="muted">Copie a linha abaixo para pagar:</p>
+                  <textarea readOnly value={qr} />
+                </div>
+              )}
+            </div>
+            <div className="card">
+              <h4>Minhas compras</h4>
+              {purchases.length === 0 ? <p className="muted">Nenhuma compra ainda.</p> : null}
+              {purchases.map((p) => (
+                <div key={p.id} className="purchase-row">
+                  <span>{p.language}</span>
+                  <span>{p.status}</span>
+                  <span>R$ {(p.amountCents / 100).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {tab === "exercicios" && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Exercícios</h2>
             <div className="chips">
               {languages.map((l) => (
                 <button key={l} className={`chip ${l === lang ? "active" : ""}`} onClick={() => setLang(l)}>
@@ -161,73 +199,39 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <label>Valor em centavos</label>
-            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
-            <button className="neo-btn" onClick={createPix} disabled={!token}>
-              Gerar PIX
-            </button>
-            {qr && (
-              <div className="qr-box">
-                <h5>QR Code PIX</h5>
-                <p className="muted">Copie a linha abaixo para pagar:</p>
-                <textarea readOnly value={qr} />
-              </div>
-            )}
           </div>
-          <div className="card">
-            <h4>Minhas compras</h4>
-            {purchases.length === 0 ? <p className="muted">Nenhuma compra ainda.</p> : null}
-            {purchases.map((p) => (
-              <div key={p.id} className="purchase-row">
-                <span>{p.language}</span>
-                <span>{p.status}</span>
-                <span>R$ {(p.amountCents / 100).toFixed(2)}</span>
-              </div>
+          <div className="grid">
+            {exercises.length === 0 ? <p className="muted">Bloqueada. Finalize o PIX para liberar.</p> : null}
+            {exercises.map((ex) => (
+              <article key={ex.id} className="card">
+                <h4>{ex.title}</h4>
+                <p>{ex.content}</p>
+                <textarea value={code} onChange={(e) => setCode(e.target.value)} placeholder={ex.starterCode || "// seu código"} />
+                <button className="neo-btn" onClick={() => submitExercise(ex.id)}>
+                  Enviar
+                </button>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <section className="panel" id="exercicios">
-        <div className="panel-head">
-          <h2>Exercícios</h2>
-          <div className="chips">
-            {languages.map((l) => (
-              <button key={l} className={`chip ${l === lang ? "active" : ""}`} onClick={() => setLang(l)}>
-                {l}
-              </button>
+      {tab === "gratis" && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Exercícios gratuitos</h2>
+            <span>Comece agora</span>
+          </div>
+          <div className="grid">
+            {free.map((ex) => (
+              <article key={ex.slug} className="card">
+                <h4>{ex.title}</h4>
+                <p>{ex.content}</p>
+              </article>
             ))}
           </div>
-        </div>
-        <div className="grid">
-          {exercises.length === 0 ? <p className="muted">Bloqueada. Finalize o PIX para liberar.</p> : null}
-          {exercises.map((ex) => (
-            <article key={ex.id} className="card">
-              <h4>{ex.title}</h4>
-              <p>{ex.content}</p>
-              <textarea value={code} onChange={(e) => setCode(e.target.value)} placeholder={ex.starterCode || "// seu código"} />
-              <button className="neo-btn" onClick={() => submitExercise(ex.id)}>
-                Enviar
-              </button>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel" id="gratis">
-        <div className="panel-head">
-          <h2>Exercícios gratuitos</h2>
-          <span>Comece agora</span>
-        </div>
-        <div className="grid">
-          {free.map((ex) => (
-            <article key={ex.slug} className="card">
-              <h4>{ex.title}</h4>
-              <p>{ex.content}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }
