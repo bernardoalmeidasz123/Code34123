@@ -8,25 +8,25 @@ export const router = express.Router();
 router.post("/create", requireAuth, async (req, res) => {
   const { language, amountCents } = req.body;
   if (!language || !amountCents) return res.status(400).json({ message: "Missing fields" });
-  const pixKey = process.env.PIX_KEY || "032984620791";
+  const pixKey = process.env.PIX_KEY || "SUA_CHAVE_PIX_AQUI";
+  const txid = uuid();
   const purchase = await prisma.languagePurchase.create({
     data: {
       userId: req.user.id,
       language: language.toUpperCase(),
       status: "PENDING",
       pixKey,
-      pixQrCode: `PIX|KEY=${pixKey}|TXID=${uuid()}`,
+      pixQrCode: txid, // usamos campo existente para guardar o txid
       amountCents,
     },
   });
-  res.json({ purchase });
+  res.json({ purchase: { ...purchase, txid, pixKey } });
 });
 
 router.post("/webhook", async (req, res) => {
-  // Stub: integrate with provider webhook to validate transaction status and txid
   const { txid, status } = req.body;
   if (!txid) return res.status(400).json({ message: "Missing txid" });
-  const purchase = await prisma.languagePurchase.findFirst({ where: { pixQrCode: { contains: txid } } });
+  const purchase = await prisma.languagePurchase.findFirst({ where: { pixQrCode: txid } });
   if (!purchase) return res.status(404).json({ message: "Purchase not found" });
   const updated = await prisma.languagePurchase.update({
     where: { id: purchase.id },
